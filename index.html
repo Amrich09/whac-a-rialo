@@ -1,0 +1,326 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Whac-A-Rialo</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#0b1220; --accent:#ff6b6b; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:#e6eef8;background:
+  radial-gradient(1200px 600px at 10% 10%, #11203a 0%, transparent 10%),
+  radial-gradient(900px 500px at 90% 90%, #132033 0%, transparent 12%),
+  linear-gradient(180deg,#071026 0%, var(--bg) 100%);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .container{width:100%;max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted)}
+  h1{margin:0;font-size:22px;color:#fff;letter-spacing:0.6px}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  select,input[type=range]{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:8px;border-radius:8px}
+  button{background:linear-gradient(90deg,var(--accent),#ff8b8b);border:0;padding:10px 14px;border-radius:10px;color:#111;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(255,107,107,0.12)}
+  .stats{display:flex;gap:10px;align-items:center}
+  .stat{background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;color:var(--muted);font-weight:600}
+  main{margin-top:16px;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .left{flex:1;min-width:320px}
+  .board{width:460px;max-width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .hole{position:relative;padding-top:100%;border-radius:12px;background:linear-gradient(180deg,#0b2a3c,#072033);overflow:hidden;border:1px solid rgba(255,255,255,0.03);box-shadow:inset 0 -6px 18px rgba(0,0,0,0.5)}
+  .mole{position:absolute;left:50%;transform:translateX(-50%) translateY(100%);bottom:0;width:78%;transition:transform 220ms cubic-bezier(.2,.9,.3,1);touch-action:manipulation}
+  .mole.show{transform:translateX(-50%) translateY(0)}
+  .mole img{width:100%;display:block;filter:drop-shadow(0 6px 8px rgba(2,6,23,0.6))}
+  .right{width:260px;min-width:220px}
+  .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
+  .label{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .difficulty{display:flex;gap:8px;margin-bottom:8px}
+  .difficulty button{background:transparent;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);color:var(--muted);font-weight:600}
+  .difficulty button.active{background:rgba(255,255,255,0.03);border-color:transparent;color:#fff}
+  .hit-effect{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);pointer-events:none;font-weight:900;color:#fff;mix-blend-mode:screen}
+  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+  @media(max-width:860px){main{flex-direction:column}.right{width:100%}}
+</style>
+</head>
+<body>
+  <div class="container" role="application" aria-label="Whac-A-Rialo game">
+    <header>
+      <h1>Whac‑A‑Rialo</h1>
+      <div class="controls">
+        <div class="stats">
+          <div class="stat" id="score">Score: 0</div>
+          <div class="stat" id="best">Best: 0</div>
+          <div class="stat" id="timer">Time: 30s</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label for="duration" class="label" style="color:var(--muted);font-size:13px;margin:0">Duration</label>
+          <select id="duration" aria-label="Duration">
+            <option value="15">15s</option>
+            <option value="30" selected>30s</option>
+            <option value="60">60s</option>
+          </select>
+        </div>
+        <button id="startBtn">Start</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="left">
+        <div class="board" id="board" role="grid" aria-label="Game board"></div>
+      </div>
+
+      <aside class="right">
+        <div class="panel">
+          <div class="label">Difficulty</div>
+          <div class="difficulty" role="radiogroup" aria-label="Difficulty levels">
+            <button data-diff="easy" class="active">Easy</button>
+            <button data-diff="normal">Normal</button>
+            <button data-diff="hard">Hard</button>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="label">Sound</div>
+          <div><label><input type="checkbox" id="soundToggle" checked> Enabled</label></div>
+
+          <div style="height:12px"></div>
+
+          <div class="label">Controls</div>
+          <div style="color:var(--muted);font-size:13px">Click/tap the Rialo when it appears. You can also press keys 1‑9 to hit corresponding holes.</div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="panel" style="margin-top:12px">
+          <div class="label">Game Tips</div>
+          <ul style="color:var(--muted);margin:0 0 0 18px;padding:0;font-size:13px">
+            <li>Higher difficulty → faster and shorter shows.</li>
+            <li>Try to chain hits for higher scores.</li>
+            <li>Use keyboard 1–9 for quick hits.</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer>Made with ❤️ — RIALO</footer>
+  </div>
+
+<script>
+  // Elements
+  const board = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const timerEl = document.getElementById('timer');
+  const startBtn = document.getElementById('startBtn');
+  const durationSel = document.getElementById('duration');
+  const soundToggle = document.getElementById('soundToggle');
+  const diffButtons = document.querySelectorAll('.difficulty button');
+
+  // State
+  const HOLES = 9;
+  let score = 0;
+  let best = parseInt(localStorage.getItem('whac_best') || '0', 10);
+  bestEl.textContent = 'Best: ' + best;
+  let timeLeft = parseInt(durationSel.value, 10);
+  timerEl.textContent = 'Time: ' + timeLeft + 's';
+  let gameRunning = false;
+  let spawnInterval = 800;
+  let showDuration = 900;
+  let spawnTimer = null;
+  let countdownTimer = null;
+  let audioCtx = null;
+
+  // Place holes
+  for (let i=0;i<HOLES;i++){
+    const hole = document.createElement('div');
+    hole.className = 'hole';
+    hole.setAttribute('data-index', i);
+    hole.setAttribute('tabindex', 0);
+    board.appendChild(hole);
+  }
+  const holes = document.querySelectorAll('.hole');
+
+  // Template function to create Rialo element
+  function createRialo(){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mole';
+    const img = document.createElement('img');
+    img.src = 'images/logo black.png';
+    img.alt = 'Rialo';
+    wrapper.appendChild(img);
+    return wrapper;
+  }
+
+  // Difficulty handlers
+  let difficulty = 'easy';
+  diffButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      diffButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      difficulty = btn.getAttribute('data-diff');
+      if (difficulty==='easy'){ spawnInterval=900; showDuration=1000; }
+      if (difficulty==='normal'){ spawnInterval=700; showDuration=850; }
+      if (difficulty==='hard'){ spawnInterval=500; showDuration=650; }
+    });
+  });
+
+  // Sound helpers (Web Audio)
+  function ensureAudio(){
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  function playPop(){
+    if (!soundToggle.checked) return;
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 700 + Math.random()*200;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+    o.stop(audioCtx.currentTime + 0.13);
+  }
+  function playHit(){
+    if (!soundToggle.checked) return;
+    ensureAudio();
+    const o1 = audioCtx.createOscillator();
+    const o2 = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o1.type='square'; o2.type='sine';
+    o1.frequency.value=220; o2.frequency.value=440;
+    const mix = audioCtx.createGain();
+    o1.connect(mix); o2.connect(mix); mix.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.01);
+    o1.start(); o2.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.16);
+    o1.stop(audioCtx.currentTime + 0.17);
+    o2.stop(audioCtx.currentTime + 0.17);
+  }
+
+  // Spawn logic
+  function spawn(){
+    // choose random empty hole
+    const free = Array.from(holes).filter(h => !h.querySelector('.mole'));
+    if (free.length===0) return;
+    const hole = free[Math.floor(Math.random()*free.length)];
+    const rialo = createRialo();
+    hole.appendChild(rialo);
+    // show animation
+    requestAnimationFrame(()=> rialo.classList.add('show'));
+    playPop();
+
+    // click handler
+    const onHit = (e)=>{
+      if (!gameRunning) return;
+      score += 1;
+      scoreEl.textContent = 'Score: ' + score;
+      playHit();
+      // hit animation: scale + little particle (text)
+      rialo.style.transition = 'transform 120ms';
+      rialo.style.transform = 'translateX(-50%) translateY(0) scale(0.86)';
+      const fx = document.createElement('div');
+      fx.className = 'hit-effect';
+      fx.style.left = '50%';
+      fx.style.top = '35%';
+      fx.textContent = '+1';
+      hole.appendChild(fx);
+      setTimeout(()=> fx.remove(), 420);
+
+      rialo.removeEventListener('click', onHit);
+      setTimeout(()=> { if (rialo.parentElement) rialo.remove(); }, 140);
+    };
+    rialo.addEventListener('click', onHit);
+
+    // keyboard accessibility: focus + space/enter
+    rialo.addEventListener('keydown', (ev)=>{ if (ev.key==='Enter' || ev.key===' ') onHit(); });
+
+    // remove after showDuration
+    setTimeout(()=> {
+      if (!rialo.parentElement) return;
+      rialo.classList.remove('show');
+      setTimeout(()=> { if (rialo.parentElement) rialo.remove(); }, 220);
+    }, showDuration * (0.7 + Math.random()*0.6));
+  }
+
+  // Start / End game
+  function startGame(){
+    if (gameRunning) return;
+    // resume audio context on user gesture
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    score = 0;
+    scoreEl.textContent = 'Score: ' + score;
+    timeLeft = parseInt(durationSel.value, 10);
+    timerEl.textContent = 'Time: ' + timeLeft + 's';
+    gameRunning = true;
+    startBtn.disabled = true;
+
+    // spawn interval
+    spawnTimer = setInterval(()=>{
+      // in normal mode sometimes spawn double
+      spawn();
+      if (Math.random() > 0.6) spawn();
+    }, spawnInterval);
+
+    // countdown
+    countdownTimer = setInterval(()=>{
+      timeLeft--;
+      timerEl.textContent = 'Time: ' + timeLeft + 's';
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+  }
+
+  function endGame(){
+    gameRunning = false;
+    startBtn.disabled = false;
+    clearInterval(spawnTimer);
+    clearInterval(countdownTimer);
+    // clear all rialos
+    document.querySelectorAll('.mole').forEach(m => m.remove());
+    // check best
+    if (score > best){
+      best = score;
+      localStorage.setItem('whac_best', String(best));
+      bestEl.textContent = 'Best: ' + best;
+      setTimeout(()=> alert('Time up! Score: ' + score + '\nNew High Score! 🎉'), 50);
+    } else {
+      setTimeout(()=> alert('Time up! Score: ' + score), 50);
+    }
+  }
+
+  startBtn.addEventListener('click', () => {
+    // ensure AudioContext created only on gesture
+    ensureAudio();
+    startGame();
+  });
+
+  // keyboard mapping 1-9
+  window.addEventListener('keydown', (e)=>{
+    if (!gameRunning) return;
+    const key = e.key;
+    const idx = parseInt(key, 10) - 1;
+    if (!isNaN(idx) && idx >=0 && idx < holes.length){
+      const mole = holes[idx].querySelector('.mole');
+      if (mole) mole.click();
+    }
+  });
+
+  // Duration change
+  durationSel.addEventListener('change', ()=> {
+    if (!gameRunning) timerEl.textContent = 'Time: ' + durationSel.value + 's';
+  });
+
+  // Difficulty click handlers set initial values
+  document.querySelectorAll('.difficulty button').forEach(btn => {
+    btn.addEventListener('click', ()=> {
+      // handled above in each listener for style, ensures variables are set
+    });
+  });
+
+  // Prevent pointer delay on mobiles
+  board.addEventListener('touchstart', e=> e.preventDefault(), {passive:true});
+
+</script>
+</body>
+</html>
